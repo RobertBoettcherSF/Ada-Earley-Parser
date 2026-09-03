@@ -65,6 +65,8 @@ package Earley_Parser is
    
    subtype Item_List is Item_Vectors.Vector;
 
+   use type Item_Vectors.Vector;
+
    --  A Chart is a sequence of Item_Lists, one for each input position (0 to N).
    package Chart_Vectors is new Ada.Containers.Vectors
      (Index_Type   => Natural,
