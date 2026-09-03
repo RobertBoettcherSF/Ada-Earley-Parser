@@ -1,6 +1,6 @@
 with Ada.Text_IO; use Ada.Text_IO;
 with Ada.Assertions;
-with Ada.Exceptions;
+with Ada.Strings.Unbounded; use Ada.Strings.Unbounded;
 with Earley_Parser; use Earley_Parser;
 
 procedure Tests is
@@ -25,9 +25,9 @@ procedure Tests is
       List : Symbol_List;
    begin
       for S of RHS loop
-         List.Append (S);
+         List.Append (New_Item => S);
       end loop;
-      G.Rules.Append ((LHS => LHS, RHS => List));
+      G.Rules.Append (New_Item => (LHS => LHS, RHS => List));
    end Add_Rule;
 
    function ST (Name : String) return Symbol renames Create_Terminal;
@@ -37,7 +37,7 @@ procedure Tests is
       List : Symbol_List;
    begin
       for S of Arr loop
-         List.Append (S);
+         List.Append (New_Item => S);
       end loop;
       return List;
    end Make_Input;
@@ -63,7 +63,7 @@ begin
    declare
       G : Grammar := (Start_Symbol => SNT ("S"), Rules => Production_Vectors.Empty_Vector);
    begin
-      Add_Rule (G, SNT ("S"), (1 => ST ("a")));
+      Add_Rule (G, SNT ("S"), [ST ("a")]);
       Check ("2.1 Grammar has correct Start_Symbol", G.Start_Symbol.Name = SNT ("S").Name);
       Check ("2.2 Grammar rules appended", Natural (G.Rules.Length) = 1);
       Check ("2.3 LHS is valid non-terminal", G.Rules.Element (1).LHS.Kind = Non_Terminal);
@@ -75,7 +75,7 @@ begin
       G : Grammar := (Start_Symbol => SNT ("S"), Rules => Production_Vectors.Empty_Vector);
       Input : constant Symbol_List := Symbol_Vectors.Empty_Vector;
    begin
-      Add_Rule (G, SNT ("S"), (1 .. 0 => <>)); -- Epsilon rule
+      Add_Rule (G, SNT ("S"), []); -- Epsilon rule
       Check ("3.1 Start rule is Epsilon", Natural (G.Rules.Element (1).RHS.Length) = 0);
       Check ("3.2 Recognizes empty input", Recognize (G, Input));
       
@@ -92,7 +92,7 @@ begin
       G : Grammar := (Start_Symbol => SNT ("S"), Rules => Production_Vectors.Empty_Vector);
       Input : constant Symbol_List := Symbol_Vectors.Empty_Vector;
    begin
-      Add_Rule (G, SNT ("S"), (1 => ST ("a")));
+      Add_Rule (G, SNT ("S"), [ST ("a")]);
       Check ("4.1 Non-Nullable grammar", Natural (G.Rules.Element (1).RHS.Length) = 1);
       Check ("4.2 Rejects empty input", not Recognize (G, Input));
       
@@ -107,9 +107,9 @@ begin
    Put_Line ("TEST 5 — Single Token Acceptance");
    declare
       G : Grammar := (Start_Symbol => SNT ("S"), Rules => Production_Vectors.Empty_Vector);
-      Input : constant Symbol_List := Make_Input ((1 => ST ("a")));
+      Input : constant Symbol_List := Make_Input ([ST ("a")]);
    begin
-      Add_Rule (G, SNT ("S"), (1 => ST ("a")));
+      Add_Rule (G, SNT ("S"), [ST ("a")]);
       Check ("5.1 Input length is 1", Natural (Input.Length) = 1);
       Check ("5.2 Token matched and recognized", Recognize (G, Input));
       Check ("5.3 Correct Chart size", Natural (Parse_Chart (G, Input).Length) = 2);
@@ -119,9 +119,9 @@ begin
    Put_Line ("TEST 6 — Single Token Rejection");
    declare
       G : Grammar := (Start_Symbol => SNT ("S"), Rules => Production_Vectors.Empty_Vector);
-      Input : constant Symbol_List := Make_Input ((1 => ST ("b")));
+      Input : constant Symbol_List := Make_Input ([ST ("b")]);
    begin
-      Add_Rule (G, SNT ("S"), (1 => ST ("a")));
+      Add_Rule (G, SNT ("S"), [ST ("a")]);
       Check ("6.1 Rules initialized", Natural (G.Rules.Length) = 1);
       Check ("6.2 Rejects mismatched token", not Recognize (G, Input));
       
@@ -137,56 +137,56 @@ begin
    Put_Line ("TEST 7 — Mathematical Expression Parsing");
    declare
       G : Grammar := (Start_Symbol => SNT ("E"), Rules => Production_Vectors.Empty_Vector);
-      Input : constant Symbol_List := Make_Input ((ST ("n"), ST ("+"), ST ("n")));
+      Input : constant Symbol_List := Make_Input ([ST ("n"), ST ("+"), ST ("n")]);
    begin
       -- E -> E + E | n
-      Add_Rule (G, SNT ("E"), (SNT ("E"), ST ("+"), SNT ("E")));
-      Add_Rule (G, SNT ("E"), (1 => ST ("n")));
+      Add_Rule (G, SNT ("E"), [SNT ("E"), ST ("+"), SNT ("E")]);
+      Add_Rule (G, SNT ("E"), [ST ("n")]);
       
       Check ("7.1 Ambiguous rule sets configured", Natural (G.Rules.Length) = 2);
       Check ("7.2 Recognizes 'n + n'", Recognize (G, Input));
-      Check ("7.3 Rejects malformed 'n +'", not Recognize (G, Make_Input ((ST ("n"), ST ("+")))));
+      Check ("7.3 Rejects malformed 'n +'", not Recognize (G, Make_Input ([ST ("n"), ST ("+")])));
    end;
 
    --  TEST 8: Left Recursion Handling
    Put_Line ("TEST 8 — Left Recursive Grammar");
    declare
       G : Grammar := (Start_Symbol => SNT ("A"), Rules => Production_Vectors.Empty_Vector);
-      Input : constant Symbol_List := Make_Input ((ST ("a"), ST ("a"), ST ("a")));
+      Input : constant Symbol_List := Make_Input ([ST ("a"), ST ("a"), ST ("a")]);
    begin
       -- A -> A a | a
-      Add_Rule (G, SNT ("A"), (SNT ("A"), ST ("a")));
-      Add_Rule (G, SNT ("A"), (1 => ST ("a")));
+      Add_Rule (G, SNT ("A"), [SNT ("A"), ST ("a")]);
+      Add_Rule (G, SNT ("A"), [ST ("a")]);
       
       Check ("8.1 Grammar configuration", G.Start_Symbol = SNT ("A"));
       Check ("8.2 Earley handles left recursion natively without infinite loops", Recognize (G, Input));
-      Check ("8.3 Rejects mismatched suffix", not Recognize (G, Make_Input ((ST ("a"), ST ("a"), ST ("b")))));
+      Check ("8.3 Rejects mismatched suffix", not Recognize (G, Make_Input ([ST ("a"), ST ("a"), ST ("b")])));
    end;
 
    --  TEST 9: Right Recursion Handling
    Put_Line ("TEST 9 — Right Recursive Grammar");
    declare
       G : Grammar := (Start_Symbol => SNT ("A"), Rules => Production_Vectors.Empty_Vector);
-      Input : constant Symbol_List := Make_Input ((ST ("a"), ST ("a"), ST ("a")));
+      Input : constant Symbol_List := Make_Input ([ST ("a"), ST ("a"), ST ("a")]);
    begin
       -- A -> a A | a
-      Add_Rule (G, SNT ("A"), (ST ("a"), SNT ("A")));
-      Add_Rule (G, SNT ("A"), (1 => ST ("a")));
+      Add_Rule (G, SNT ("A"), [ST ("a"), SNT ("A")]);
+      Add_Rule (G, SNT ("A"), [ST ("a")]);
       
       Check ("9.1 Grammar configuration", G.Start_Symbol = SNT ("A"));
       Check ("9.2 Recursion unrolls accurately", Recognize (G, Input));
-      Check ("9.3 Validates subsets correctly", Recognize (G, Make_Input ((1 => ST ("a")))));
+      Check ("9.3 Validates subsets correctly", Recognize (G, Make_Input ([ST ("a")])));
    end;
 
    --  TEST 10: Highly Ambiguous Grammar (Catalan Numbers)
    Put_Line ("TEST 10 — Highly Ambiguous Grammar");
    declare
       G : Grammar := (Start_Symbol => SNT ("S"), Rules => Production_Vectors.Empty_Vector);
-      Input : constant Symbol_List := Make_Input ((ST ("x"), ST ("x"), ST ("x"), ST ("x")));
+      Input : constant Symbol_List := Make_Input ([ST ("x"), ST ("x"), ST ("x"), ST ("x")]);
    begin
       -- S -> S S | x
-      Add_Rule (G, SNT ("S"), (SNT ("S"), SNT ("S")));
-      Add_Rule (G, SNT ("S"), (1 => ST ("x")));
+      Add_Rule (G, SNT ("S"), [SNT ("S"), SNT ("S")]);
+      Add_Rule (G, SNT ("S"), [ST ("x")]);
       
       Check ("10.1 Grammar is set", Natural (G.Rules.Length) = 2);
       Check ("10.2 Four tokens recognized", Recognize (G, Input));
@@ -202,11 +202,11 @@ begin
    Put_Line ("TEST 11 — Complex Item Generation Validation");
    declare
       G : Grammar := (Start_Symbol => SNT ("S"), Rules => Production_Vectors.Empty_Vector);
-      Input : constant Symbol_List := Make_Input ((ST ("("), ST (")")));
+      Input : constant Symbol_List := Make_Input ([ST ("("), ST (")")]);
    begin
       -- S -> ( S ) | epsilon
-      Add_Rule (G, SNT ("S"), (ST ("("), SNT ("S"), ST (")")));
-      Add_Rule (G, SNT ("S"), (1 .. 0 => <>));
+      Add_Rule (G, SNT ("S"), [ST ("("), SNT ("S"), ST (")")]);
+      Add_Rule (G, SNT ("S"), []);
       
       Check ("11.1 Parenthesis matching recognition", Recognize (G, Input));
       
