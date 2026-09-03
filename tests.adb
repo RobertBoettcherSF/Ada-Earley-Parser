@@ -25,9 +25,11 @@ procedure Tests is
       List : Symbol_List;
    begin
       for S of RHS loop
-         Symbol_Vectors.Append (List, S);
+         List.Append (S);
       end loop;
-      Production_Vectors.Append (G.Rules, (LHS => LHS, RHS => List));
+      --  Qualify the aggregate as Production'() so the compiler knows which
+      --  overloaded Append (Element vs Vector) to invoke.
+      G.Rules.Append (Production'(LHS => LHS, RHS => List));
    end Add_Rule;
 
    function ST (Name : String) return Symbol renames Create_Terminal;
@@ -37,7 +39,7 @@ procedure Tests is
       List : Symbol_List;
    begin
       for S of Arr loop
-         Symbol_Vectors.Append (List, S);
+         List.Append (S);
       end loop;
       return List;
    end Make_Input;
