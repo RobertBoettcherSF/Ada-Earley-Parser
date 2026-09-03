@@ -240,6 +240,7 @@ begin
       Input   : constant Symbol_List := Symbol_Vectors.Empty_Vector;
       Hit     : Boolean := False;
       Res     : Boolean;
+      pragma Warnings (Off, Res);
    begin
       Check ("13.1 Rule count is strictly 0", Natural (Empty_G.Rules.Length) = 0);
       
