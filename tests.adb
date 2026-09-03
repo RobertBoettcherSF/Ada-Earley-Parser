@@ -25,9 +25,9 @@ procedure Tests is
       List : Symbol_List;
    begin
       for S of RHS loop
-         List.Append (New_Item => S);
+         Symbol_Vectors.Append (List, S);
       end loop;
-      G.Rules.Append (New_Item => (LHS => LHS, RHS => List));
+      Production_Vectors.Append (G.Rules, (LHS => LHS, RHS => List));
    end Add_Rule;
 
    function ST (Name : String) return Symbol renames Create_Terminal;
@@ -37,7 +37,7 @@ procedure Tests is
       List : Symbol_List;
    begin
       for S of Arr loop
-         List.Append (New_Item => S);
+         Symbol_Vectors.Append (List, S);
       end loop;
       return List;
    end Make_Input;
